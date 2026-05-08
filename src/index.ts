@@ -56,8 +56,10 @@ if (!GMAIL_USER || !GMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  pool: true, // Use connection pooling for better performance
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL/TLS
+  pool: true,
   maxConnections: 5,
   maxMessages: 100,
   auth: {
