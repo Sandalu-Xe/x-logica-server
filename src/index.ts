@@ -56,9 +56,10 @@ if (!GMAIL_USER || !GMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '74.125.133.108', // smtp.gmail.com IPv4 literal
   port: 465,
-  secure: true, // Use SSL/TLS
+  secure: true,
+  servername: 'smtp.gmail.com', // Vital for SNI/SSL verification
   pool: true,
   maxConnections: 5,
   maxMessages: 100,
@@ -66,10 +67,9 @@ const transporter = nodemailer.createTransport({
     user: GMAIL_USER,
     pass: GMAIL_PASS,
   },
-  // Set timeouts to prevent hanging
-  connectionTimeout: 10000, // 10s
-  greetingTimeout: 10000,   // 10s
-  socketTimeout: 30000,     // 30s
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 30000,
 });
 
 // Verify connection configuration on startup
