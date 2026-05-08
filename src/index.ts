@@ -46,20 +46,38 @@ const upload = multer({
   },
 });
 
-// ─── Nodemailer ───────────────────────────────────────────────────────────────
-function createTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+// ─── Nodemailer: Singleton Transporter ───────────────────────────────────────
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
 
-  if (!user || !pass) {
-    throw new Error('Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables.');
-  }
-
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
+if (!GMAIL_USER || !GMAIL_PASS) {
+  console.error('❌ Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables.');
+  process.exit(1);
 }
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  pool: true, // Use connection pooling for better performance
+  maxConnections: 5,
+  maxMessages: 100,
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_PASS,
+  },
+  // Set timeouts to prevent hanging
+  connectionTimeout: 10000, // 10s
+  greetingTimeout: 10000,   // 10s
+  socketTimeout: 30000,     // 30s
+});
+
+// Verify connection configuration on startup
+transporter.verify((error) => {
+  if (error) {
+    console.error('❌ Mail transporter verification failed:', error);
+  } else {
+    console.log('✅ Mail transporter is ready to send emails');
+  }
+});
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
@@ -68,12 +86,12 @@ app.get('/', (_req, res) => {
 
 // ─── POST /api/apply ─────────────────────────────────────────────────────────
 app.post('/api/apply', upload.single('cv'), async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/apply - Start`);
   try {
     const { name, email, phone, portfolio, message, position } = req.body;
-    const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"X-Logica Careers" <${process.env.GMAIL_USER}>`,
+      from: `"X-Logica Careers" <${GMAIL_USER}>`,
       to: 'info.xlogica@gmail.com',
       replyTo: email,
       subject: `🚀 New Job Application — ${position || 'General'}`,
@@ -102,6 +120,7 @@ app.post('/api/apply', upload.single('cv'), async (req, res) => {
         : [],
     });
 
+    console.log(`[${new Date().toISOString()}] POST /api/apply - Success`);
     res.status(200).json({ success: true, message: 'Application submitted successfully!' });
   } catch (err: unknown) {
     console.error('[/api/apply] Error:', err);
@@ -112,12 +131,12 @@ app.post('/api/apply', upload.single('cv'), async (req, res) => {
 
 // ─── POST /api/contact ───────────────────────────────────────────────────────
 app.post('/api/contact', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/contact - Start`);
   try {
     const { name, email, message } = req.body;
-    const transporter = createTransporter();
 
     await transporter.sendMail({
-      from: `"X-Logica Website" <${process.env.GMAIL_USER}>`,
+      from: `"X-Logica Website" <${GMAIL_USER}>`,
       to: 'info.xlogica@gmail.com',
       replyTo: email,
       subject: `💬 New Contact Message from ${name || 'Website Visitor'}`,
@@ -139,6 +158,7 @@ app.post('/api/contact', async (req, res) => {
       `,
     });
 
+    console.log(`[${new Date().toISOString()}] POST /api/contact - Success`);
     res.status(200).json({ success: true, message: 'Message sent successfully!' });
   } catch (err: unknown) {
     console.error('[/api/contact] Error:', err);
