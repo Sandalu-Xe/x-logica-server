@@ -158,4 +158,16 @@ app.post('/api/apply', upload.single('cv'), async (req, res) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`✅ Server is running on port ${PORT}`);
+
+  // ─── Keep-alive ping (Render free tier spins down after 15 min) ─────────────
+  // Pings itself every 14 minutes so the server never goes cold.
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${SELF_URL}/`);
+      console.log(`[keep-alive] ping → ${res.status}`);
+    } catch (e) {
+      console.warn('[keep-alive] ping failed:', e);
+    }
+  }, 14 * 60 * 1000); // every 14 minutes
 });
