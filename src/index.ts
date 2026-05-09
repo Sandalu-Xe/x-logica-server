@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
 import multer from 'multer';
 import { Resend } from 'resend';
 import path from 'path';
@@ -13,22 +12,33 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins: (string | RegExp)[] = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  /^https:\/\/.*\.vercel\.app$/,          // any Vercel preview / production URL
-  ...(process.env.FRONTEND_URL?.trim()    // set in Render: https://x-logica-six.vercel.app
-    ? [process.env.FRONTEND_URL.trim()]
-    : []),
-];
+// Improved CORS handling to be more robust and handle all headers
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://x-logica.vercel.app',
+    'https://x-logica-six.vercel.app'
+  ];
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-    methods: ['POST', 'OPTIONS', 'GET'],
-    allowedHeaders: ['Content-Type'],
-  })
-);
+  if (origin) {
+    // Check if origin matches allowed list or Vercel preview URLs
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // ─── Body parsers ─────────────────────────────────────────────────────────────
 app.use(express.json());
