@@ -1,4 +1,9 @@
 import 'dotenv/config';
+import dns from 'dns';
+
+// ── Force IPv4 DNS resolution globally (Render free tier blocks IPv6 outbound) ─
+dns.setDefaultResultOrder('ipv4first');
+
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -14,14 +19,18 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+const allowedOrigins: (string | RegExp)[] = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  /^https:\/\/.*\.vercel\.app$/,          // any Vercel preview / production URL
+  ...(process.env.FRONTEND_URL?.trim()    // set this in Render: https://x-logica-six.vercel.app
+    ? [process.env.FRONTEND_URL.trim()]
+    : []),
+];
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      /^https:\/\/.*\.vercel\.app$/,        // any Vercel preview / production URL
-      process.env.FRONTEND_URL || '',        // set this in Railway: https://x-logica.vercel.app
-    ].filter(Boolean),
+    origin: allowedOrigins,
     methods: ['POST', 'OPTIONS', 'GET'],
     allowedHeaders: ['Content-Type'],
   })
@@ -56,19 +65,19 @@ if (!GMAIL_USER || !GMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: 'smtp4.gmail.com',  // IPv4-only Gmail SMTP endpoint (avoids ENETUNREACH on Render)
   port: 587,
-  secure: false, // Use STARTTLS
-  family: 4,     // Force IPv4 to bypass ENETUNREACH
+  secure: false,            // STARTTLS on port 587
+  family: 4,                // Belt-and-suspenders: also tell the socket to use IPv4
   pool: true,
   maxConnections: 1,
   auth: {
     user: GMAIL_USER,
     pass: GMAIL_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 30000,
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 45000,
 });
 
 // Verify connection configuration on startup
