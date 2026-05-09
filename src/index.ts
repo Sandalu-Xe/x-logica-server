@@ -65,7 +65,7 @@ if (!GMAIL_USER || !GMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp4.gmail.com',  // IPv4-only Gmail SMTP endpoint (avoids ENETUNREACH on Render)
+  host: 'smtp.gmail.com',   // dns.setDefaultResultOrder('ipv4first') above ensures IPv4 is used
   port: 587,
   secure: false,            // STARTTLS on port 587
   family: 4,                // Belt-and-suspenders: also tell the socket to use IPv4
